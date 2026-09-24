@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart PHC &ndash; AI-Based Healthcare Management</title>
+
+  <!-- LOCAL vendor files - no internet required -->
+  <script src="vendor/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <script src="vendor/react.js"></script>
+  <script src="vendor/react-dom.js"></script>
+  <script src="vendor/lucide-react.js"></script>
+  <script src="vendor/chart.js"></script>
+
+  <!-- Google Fonts (optional - works offline with system fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; margin: 0; }
+    #root { min-height: 100vh; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+    .sidebar-transition { transition: transform 0.3s ease-in-out; }
+    .phc-card-hover { transition: box-shadow 0.2s, transform 0.2s; }
+    .phc-card-hover:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.12); transform: translateY(-2px); }
+    @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .badge-critical { animation: pulse-red 2s infinite; }
+    .token-display {
+      font-size: 8rem; font-weight: 800; line-height: 1;
+      background: linear-gradient(135deg, #1e40af, #0d9488);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .chart-container { position: relative; height: 250px; }
+    .ai-score-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; }
+    @media print { .no-print { display: none !important; } }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes loadbar { 0%{width:0%} 60%{width:80%} 100%{width:100%} }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e40af,#0d9488);">
+      <div style="color:white;text-align:center;padding:20px;">
+        <div style="font-size:4rem;margin-bottom:1rem;">&#x1F3E5;</div>
+        <h1 style="font-size:2rem;font-weight:800;margin:0;letter-spacing:-0.5px;">Smart PHC</h1>
+        <p style="opacity:0.85;margin-top:0.5rem;font-size:0.9rem;font-weight:500;">AI-Based Doctor Recommendation &amp; Dynamic Resource Allocation</p>
+        <p style="opacity:0.6;margin-top:0.25rem;font-size:0.75rem;">Coimbatore District Health Authority, Tamil Nadu</p>
+        <div style="margin:1.5rem auto 0;width:200px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;background:white;border-radius:2px;animation:loadbar 1.5s ease-in-out infinite;"></div>
+        </div>
+        <p style="opacity:0.5;margin-top:1rem;font-size:0.75rem;">Loading scripts&hellip;</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global JS error catcher - shows visible errors instead of blank page -->
+  <script>
+    window._sphcErrors = [];
+    window.onerror = function(msg, src, line) {
+      var file = (src || '').split('/').pop().split('?')[0] || 'unknown';
+      window._sphcErrors.push(file + ':' + line + ' - ' + msg);
+      console.error('[SmartPHC Error]', msg, 'in', file, 'line', line);
+    };
+  </script>
+
+  <!-- App JS files in dependency order -->
+  <script src="js/data.js"></script>
+  <script src="js/context.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/login.js"></script>
+  <script src="js/ddhs.js"></script>
+  <script src="js/queue.js"></script>
+  <script src="js/registration.js"></script>
+  <script src="js/medicine.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/doctor-dashboard.js"></script>
+  <script src="js/staff-dashboard.js"></script>
+  <script src="js/patient-dashboard.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/notifications.js"></script>
+
+  <!-- Main App Router -->
+  <script>
+  (function() {
+    var h = React.createElement;
+
+    var ROLE_DEFAULTS = {
+      ddhs:    'ddhs/dashboard',
+      doctor:  'doctor/dashboard',
+      staff:   'staff/dashboard',
+      patient: 'patient/dashboard',
+      admin:   'admin/dashboard'
+    };
+
+    function getPage(page) {
+      var map = {
+        'login':                     window.LoginPage,
+        'ddhs/dashboard':            window.DDHSDashboard,
+        'ddhs/phcs':                 window.PHCManagementPage,
+        'ddhs/attendance':           window.AttendancePage,
+        'ddhs/ai-recommendations':   window.AIRecommendationPage,
+        'ddhs/live-queue':           window.QueueManagementPage,
+        'ddhs/medicine':             window.MedicineInventoryPage,
+        'ddhs/patient-registration': window.PatientRegistrationPage,
+        'ddhs/reports':              window.ReportsPage,
+        'ddhs/audit':                window.AuditLogPage,
+        'ddhs/notifications':        window.NotificationsPage,
+        'ddhs/settings':             window.SystemSettingsPage,
+        'doctor/dashboard':          window.DoctorDashboard,
+        'doctor/attendance':         window.AttendancePage,
+        'doctor/queue':              window.DoctorQueuePage,
+        'doctor/history':            window.DoctorHistoryPage,
+        'doctor/medicine':           window.MedicineInventoryPage,
+        'doctor/assignments':        window.DoctorAssignmentsPage,
+        'doctor/profile':            window.DoctorDashboard,
+        'doctor/notifications':      window.NotificationsPage,
+        'staff/dashboard':           window.StaffDashboard,
+        'staff/registration':        window.PatientRegistrationPage,
+        'staff/scanner':             window.PatientRegistrationPage,
+        'staff/queue':               window.QueueManagementPage,
+        'staff/medicine':            window.MedicineInventoryPage,
+        'staff/attendance':          window.AttendancePage,
+        'staff/reports':             window.ReportsPage,
+        'staff/notifications':       window.NotificationsPage,
+        'patient/dashboard':         window.PatientDashboard,
+        'patient/qr':                window.PatientQRPage,
+        'patient/token':             window.QueueManagementPage,
+        'patient/history':           window.PatientHistoryPage,
+        'patient/profile':           window.PatientDashboard,
+        'patient/notifications':     window.NotificationsPage,
+        'admin/dashboard':           window.AdminDashboard,
+        'admin/users':               window.UserManagementPage,
+        'admin/phcs':                window.PHCManagementPage,
+        'admin/doctors':             window.AdminDoctorPage,
+        'admin/config':              window.SystemSettingsPage,
+        'admin/ai-weights':          window.AIWeightsPage,
+        'admin/audit':               window.AuditLogPage,
+        'admin/settings':            window.SystemSettingsPage,
+        'admin/notifications':       window.NotificationsPage,
+      };
+      return map[page] || null;
+    }
+
+    /* FallbackRedirect - useEffect at component top level (hooks rules compliant) */
+    function FallbackRedirect(props) {
+      React.useEffect(function() {
+        props.dispatch({ type: 'NAVIGATE', page: props.targetPage });
+      }, [props.targetPage]);
+      return h('div', {
+        style: { display:'flex', alignItems:'center', justifyContent:'center',
+                 minHeight:'100vh', background:'#f8fafc' }
+      },
+        h('div', { style: { textAlign:'center' } },
+          h('div', {
+            style: { width:'36px', height:'36px', border:'4px solid #e2e8f0',
+                     borderTopColor:'#3b82f6', borderRadius:'50%',
+                     animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }
+          }),
+          h('p', { style: { color:'#64748b', fontSize:'14px' } }, 'Loading...')
+        )
+      );
+    }
+
+    function App() {
+      var ctx = React.useContext(window.AppContext);
+      var state = ctx.state;
+      var dispatch = ctx.dispatch;
+      var currentUser = state.currentUser;
+      var currentPage = state.currentPage;
+
+      if (!currentUser) return h(window.LoginPage);
+
+      if (currentPage === 'login') {
+        return h(FallbackRedirect, { dispatch: dispatch,
+          targetPage: ROLE_DEFAULTS[currentUser.role] || 'ddhs/dashboard' });
+      }
+
+      var PageComponent = getPage(currentPage);
+      if (!PageComponent) {
+        return h(FallbackRedirect, { dispatch: dispatch,
+          targetPage: ROLE_DEFAULTS[currentUser.role] || 'ddhs/dashboard' });
+      }
+
+      var titleWords = currentPage.split('/').pop().split('-').map(function(w) {
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+
+      return h(window.DashboardLayout, { pageTitle: titleWords }, h(PageComponent));
+    }
+
+    function Root() {
+      return h(window.AppProvider, null, h(App));
+    }
+
+    window.addEventListener('load', function() {
+      /* Check required globals before mounting */
+      var required = ['React','ReactDOM','AppContext','AppProvider','LoginPage',
+        'DashboardLayout','DDHSDashboard','StaffDashboard','DoctorDashboard',
+        'PatientDashboard','AdminDashboard','PHCManagementPage','AuditLogPage'];
+      var missing = required.filter(function(n){ return !window[n]; });
+
+      if (missing.length || window._sphcErrors.length) {
+        var errHtml = '<div style="display:flex;align-items:center;justify-content:center;' +
+          'min-height:100vh;background:#fef2f2;font-family:system-ui,sans-serif;">' +
+          '<div style="background:white;border:2px solid #fca5a5;border-radius:16px;' +
+          'padding:32px;max-width:540px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.08);">' +
+          '<div style="font-size:40px;text-align:center;margin-bottom:16px;">&#x26A0;&#xFE0F;</div>' +
+          '<h2 style="color:#dc2626;margin:0 0 8px;font-size:18px;font-weight:700;">Smart PHC failed to load</h2>';
+        if (missing.length) {
+          errHtml += '<p style="color:#64748b;font-size:13px;margin:0 0 8px;">Missing globals: <code style="background:#fee2e2;padding:2px 6px;border-radius:4px;color:#991b1b;">' +
+            missing.join(', ') + '</code></p>';
+        }
+        if (window._sphcErrors.length) {
+          errHtml += '<p style="color:#64748b;font-size:13px;margin:8px 0 4px;">JS Errors caught:</p>' +
+            '<pre style="background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;font-size:11px;' +
+            'white-space:pre-wrap;word-break:break-word;margin:0;">' +
+            window._sphcErrors.slice(0,5).join('\n') + '</pre>';
+        }
+        errHtml += '<p style="color:#94a3b8;font-size:12px;margin:16px 0 0;">Press <strong>F12</strong> &rarr; Console for full details.</p>' +
+          '</div></div>';
+        document.getElementById('root').innerHTML = errHtml;
+        return;
+      }
+
+      try {
+        var reactRoot = ReactDOM.createRoot(document.getElementById('root'));
+        reactRoot.render(h(Root));
+        console.log('[SmartPHC] Mounted successfully!');
+      } catch(e) {
+        console.error('[SmartPHC] Fatal render error:', e);
+        document.getElementById('root').innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;' +
+          'background:#fef2f2;font-family:system-ui,sans-serif;">' +
+          '<div style="background:white;border:2px solid #fca5a5;border-radius:16px;padding:32px;max-width:540px;width:90%;">' +
+          '<div style="font-size:40px;text-align:center;margin-bottom:16px;">&#x1F4A5;</div>' +
+          '<h2 style="color:#dc2626;margin:0 0 12px;font-size:18px;">Render Error</h2>' +
+          '<pre style="background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;font-size:11px;' +
+          'white-space:pre-wrap;word-break:break-word;">' + e.message + '</pre>' +
+          '<p style="color:#94a3b8;font-size:12px;margin-top:16px;">Press <strong>F12</strong> &rarr; Console for full details.</p>' +
+          '</div></div>';
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

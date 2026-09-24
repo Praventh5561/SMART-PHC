@@ -1,0 +1,16 @@
+# Python bytecache
+__pycache__/
+*.py[cod]
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor dirs
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
