@@ -1,6 +1,8 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .database import engine, Base, SessionLocal
 from .seed_data import seed_database
 from .routers import auth, phcs, doctors, recommendations, queue, medicines, patients, reports, audit
@@ -15,15 +17,18 @@ try:
 finally:
     db.close()
 
+# Base project directory containing index.html, js, vendor
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 app = FastAPI(
-    title="Smart PHC REST API",
-    description="Backend API for Smart PHC: AI-Based Doctor Recommendation & Dynamic Resource Allocation Framework (Coimbatore District, Tamil Nadu)",
+    title="Smart PHC - AI Healthcare Management System",
+    description="Unified Full-Stack App & REST API for Smart PHC (Coimbatore District, Tamil Nadu)",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# Enable CORS for all local development and GitHub Pages origins
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,7 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register all API routers
+# Register API routers
 app.include_router(auth.router)
 app.include_router(phcs.router)
 app.include_router(doctors.router)
@@ -43,20 +48,32 @@ app.include_router(patients.router)
 app.include_router(reports.router)
 app.include_router(audit.router)
 
-@app.get("/")
-def root():
+# Health check endpoint
+@app.get("/api/health")
+def health_check():
     return {
-        "status": "online",
-        "app": "Smart PHC Backend API",
-        "district": "Coimbatore, Tamil Nadu",
-        "docs": "/docs",
-        "redoc": "/redoc",
+        "status": "healthy",
+        "service": "Smart PHC Unified Application",
         "version": "1.0.0"
     }
 
-@app.get("/api/health")
-def health_check():
-    return {"status": "healthy", "service": "Smart PHC FastAPI Service"}
+# Mount static asset folders for frontend
+js_dir = os.path.join(ROOT_DIR, "js")
+vendor_dir = os.path.join(ROOT_DIR, "vendor")
+
+if os.path.exists(js_dir):
+    app.mount("/js", StaticFiles(directory=js_dir), name="js")
+
+if os.path.exists(vendor_dir):
+    app.mount("/vendor", StaticFiles(directory=vendor_dir), name="vendor")
+
+# Serve the merged frontend web application at root
+@app.get("/")
+async def serve_frontend():
+    index_file = os.path.join(ROOT_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "index.html not found"}
 
 if __name__ == "__main__":
     import uvicorn
