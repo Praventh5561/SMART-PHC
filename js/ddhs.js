@@ -269,6 +269,80 @@ window.PHCManagementPage=function PHCManagementPage(){
   var tf=R.useState('All'); var setTf=tf[1]; var talukF=tf[0];
   var sf=R.useState('All'); var setSf=sf[1]; var statF=sf[0];
   var sel=R.useState(null); var setSel=sel[1]; var selPhc=sel[0];
+
+  // Add PHC Modal State
+  var addM=R.useState(false); var setAddM=addM[1]; var showAdd=addM[0];
+  var nName=R.useState(''); var setNName=nName[1]; var newName=nName[0];
+  var nTaluk=R.useState(window.TALUKS[0]||'Coimbatore North'); var setNTaluk=nTaluk[1]; var newTaluk=nTaluk[0];
+  var nLoc=R.useState(''); var setNLoc=nLoc[1]; var newLoc=nLoc[0];
+  var nDist=R.useState('15'); var setNDist=nDist[1]; var newDist=nDist[0];
+  var nDocs=R.useState('3'); var setNDocs=nDocs[1]; var newDocs=nDocs[0];
+  var nErr=R.useState(''); var setNErr=nErr[1]; var formErr=nErr[0];
+  var nSaving=R.useState(false); var setNSaving=nSaving[1]; var isSaving=nSaving[0];
+
+  function handleSavePHC(e) {
+    if(e) e.preventDefault();
+    if(!newName.trim()){
+      setNErr('Please enter the PHC Name');
+      return;
+    }
+    if(!newLoc.trim()){
+      setNErr('Please enter the PHC Location/Address');
+      return;
+    }
+    setNErr('');
+    setNSaving(true);
+
+    var nextNum = state.phcs.length + 1;
+    var nextId = 'PHC' + String(nextNum).padStart(3, '0');
+    while(state.phcs.some(function(p){ return p.id === nextId; })) {
+      nextNum++;
+      nextId = 'PHC' + String(nextNum).padStart(3, '0');
+    }
+
+    var docsCount = parseInt(newDocs, 10) || 3;
+    var distVal = parseFloat(newDist) || 15.0;
+
+    var newPhcObj = {
+      id: nextId,
+      name: newName.trim(),
+      taluk: newTaluk,
+      location: newLoc.trim(),
+      distanceFromHQ: distVal,
+      doctorsAssigned: docsCount,
+      doctorsOnDuty: docsCount,
+      doctorsAbsent: 0,
+      patientsWaiting: 0,
+      avgWaitingTime: 10,
+      status: 'normal',
+      medicineAlerts: 0,
+      currentToken: 1,
+      lastToken: 1
+    };
+
+    // Save to FastAPI backend if online
+    if (window.API && window.API.addPhc) {
+      window.API.addPhc({
+        name: newPhcObj.name,
+        taluk: newPhcObj.taluk,
+        location: newPhcObj.location,
+        distance_from_hq: newPhcObj.distanceFromHQ,
+        doctors_assigned: newPhcObj.doctorsAssigned
+      }).catch(function(err){ console.warn('[SmartPHC] Backend sync warning:', err); });
+    }
+
+    // Update global state immediately
+    dispatch({ type: 'ADD_PHC', phc: newPhcObj });
+
+    // Reset and close
+    setNSaving(false);
+    setNName('');
+    setNLoc('');
+    setNDist('15');
+    setNDocs('3');
+    setAddM(false);
+  }
+
   var filtered=state.phcs.filter(function(p){
     return(p.name.toLowerCase().includes(search.toLowerCase())||p.location.toLowerCase().includes(search.toLowerCase()))&&
       (talukF==='All'||p.taluk===talukF)&&(statF==='All'||p.status===statF);
@@ -278,7 +352,10 @@ window.PHCManagementPage=function PHCManagementPage(){
   return h('div',{className:'space-y-5'},
     h('div',{className:'flex items-center justify-between'},
       h('div',{},h('h1',{className:'text-xl font-bold text-gray-900'},'PHC Management'),h('p',{className:'text-gray-500 text-sm'},filtered.length+' of '+state.phcs.length+' PHCs')),
-      h('button',{className:'flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700'},icons.Plus&&h(icons.Plus,{size:15}),'Add PHC')
+      h('button',{
+        onClick:function(){ setNErr(''); setAddM(true); },
+        className:'flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-all'
+      },icons.Plus&&h(icons.Plus,{size:15}),'Add PHC')
     ),
     h('div',{className:'flex flex-wrap gap-3'},
       h(window.SearchInput,{placeholder:'Search PHC...',value:search,onChange:function(e){setSv(e.target.value);}}),
@@ -331,6 +408,74 @@ window.PHCManagementPage=function PHCManagementPage(){
               h('div',{className:'text-right'},h(window.Badge,{status:d.status},d.status),d.checkInTime&&h('p',{className:'text-xs text-gray-400 mt-0.5'},'In: '+d.checkInTime))
             );
           })
+        )
+      )
+    ),
+    showAdd&&h(window.Modal,{isOpen:true,onClose:function(){setAddM(false);},title:'Add New Primary Health Centre (PHC)',size:'md'},
+      h('form',{onSubmit:handleSavePHC,className:'space-y-4'},
+        formErr&&h('div',{className:'p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200'},formErr),
+        h('div',{},
+          h('label',{className:'block text-xs font-semibold text-gray-700 mb-1'},'PHC Name *'),
+          h('input',{
+            type:'text',
+            value:newName,
+            onChange:function(e){setNName(e.target.value);},
+            placeholder:'e.g. PHC Vadavalli',
+            className:'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none'
+          })
+        ),
+        h('div',{className:'grid grid-cols-2 gap-3'},
+          h('div',{},
+            h('label',{className:'block text-xs font-semibold text-gray-700 mb-1'},'Taluk *'),
+            h('select',{
+              value:newTaluk,
+              onChange:function(e){setNTaluk(e.target.value);},
+              className:'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none'
+            },window.TALUKS.map(function(t){return h('option',{key:t,value:t},t);}))
+          ),
+          h('div',{},
+            h('label',{className:'block text-xs font-semibold text-gray-700 mb-1'},'Distance from HQ (km)'),
+            h('input',{
+              type:'number',
+              step:'0.5',
+              value:newDist,
+              onChange:function(e){setNDist(e.target.value);},
+              className:'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none'
+            })
+          )
+        ),
+        h('div',{},
+          h('label',{className:'block text-xs font-semibold text-gray-700 mb-1'},'Location / Address *'),
+          h('input',{
+            type:'text',
+            value:newLoc,
+            onChange:function(e){setNLoc(e.target.value);},
+            placeholder:'e.g. Vadavalli Main Road, Near Bus Terminus',
+            className:'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none'
+          })
+        ),
+        h('div',{},
+          h('label',{className:'block text-xs font-semibold text-gray-700 mb-1'},'Doctors Assigned'),
+          h('input',{
+            type:'number',
+            min:'1',
+            max:'10',
+            value:newDocs,
+            onChange:function(e){setNDocs(e.target.value);},
+            className:'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none'
+          })
+        ),
+        h('div',{className:'flex justify-end gap-3 pt-3 border-t border-gray-100'},
+          h('button',{
+            type:'button',
+            onClick:function(){setAddM(false);},
+            className:'px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors'
+          },'Cancel'),
+          h('button',{
+            type:'submit',
+            disabled:isSaving,
+            className:'px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all'
+          },isSaving?'Saving...':'Save & Register PHC')
         )
       )
     )

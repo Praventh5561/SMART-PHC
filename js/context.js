@@ -1,4 +1,4 @@
-﻿// context.js - AppContext, Reducer, AppProvider
+// context.js - AppContext, Reducer, AppProvider
 (function(){
 var R=React;
 
@@ -140,6 +140,30 @@ function reducer(state,action){
       var alId3='AL'+Date.now();
       var newL2={id:alId3,timestamp:'Just now',user:state.currentUser?state.currentUser.name:'Staff',role:'PHC Staff',action:'Registered new patient',phcId:newPat.registeredPhcId,doctorId:null,details:'Patient '+pid+' registered',score:null};
       return Object.assign({},state,{patients:state.patients.concat([newPat]),auditLogs:[newL2].concat(state.auditLogs),toastMsg:'Patient '+pid+' registered successfully!'});
+    }
+
+    case'ADD_PHC':{
+      var newP=action.phc;
+      var newQueues=Object.assign({},state.queues);
+      newQueues[newP.id]={currentToken:newP.currentToken||1,serving:newP.currentToken||1,tokens:[2,3,4]};
+      var alIdPhc='AL'+Date.now();
+      var newLogPhc={
+        id:alIdPhc,
+        timestamp:'Just now',
+        user:state.currentUser?state.currentUser.name:'Administrator',
+        role:state.currentUser?state.currentUser.role:'admin',
+        action:'Added new PHC',
+        phcId:newP.id,
+        doctorId:null,
+        details:'PHC '+newP.name+' ('+newP.taluk+') registered into district network',
+        score:null
+      };
+      return Object.assign({},state,{
+        phcs:state.phcs.concat([newP]),
+        queues:newQueues,
+        auditLogs:[newLogPhc].concat(state.auditLogs),
+        toastMsg:'PHC '+newP.name+' added successfully!'
+      });
     }
 
     case'UPDATE_MEDICINE_STOCK':{

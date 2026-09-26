@@ -30,6 +30,14 @@ class PHCResponse(BaseModel):
         populate_by_name = True
         from_attributes = True
 
+class CreatePHCRequest(BaseModel):
+    name: str
+    taluk: str
+    location: str
+    distance_from_hq: float = 15.0
+    doctors_assigned: int = 3
+
+
 class DoctorResponse(BaseModel):
     id: str
     name: str

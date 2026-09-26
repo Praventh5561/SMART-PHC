@@ -39,6 +39,18 @@
       });
     },
 
+    addPhc: function(phcData) {
+      if (!isBackendOnline) return Promise.resolve(phcData);
+      return fetch(API_BASE + "/phcs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(phcData)
+      }).then(function(res) {
+        if (!res.ok) throw new Error("Failed to add PHC to backend");
+        return res.json();
+      });
+    },
+
     getRecommendations: function(targetPhcId, specialization) {
       if (!isBackendOnline) return Promise.resolve(null);
       var url = API_BASE + "/recommendations/doctor?target_phc_id=" + encodeURIComponent(targetPhcId) + 
