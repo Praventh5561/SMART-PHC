@@ -334,6 +334,11 @@ window.PHCManagementPage=function PHCManagementPage(){
     // Update global state immediately
     dispatch({ type: 'ADD_PHC', phc: newPhcObj });
 
+    // Clear filters so new PHC is immediately visible
+    setSv('');
+    setTf('All');
+    setSf('All');
+
     // Reset and close
     setNSaving(false);
     setNName('');
