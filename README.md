@@ -25,23 +25,24 @@
 
 ## 🚀 How to Run
 
-### 1. Start the FastAPI Backend
+### Option 1: One-Click Launcher (Windows)
+Simply double-click:
 ```bash
-# Install dependencies
+run.bat
+```
+
+### Option 2: Command Line
+```bash
+# 1. Install dependencies
 pip install -r backend/requirements.txt
 
-# Run backend server
+# 2. Run unified full-stack server (Frontend + Backend + Database)
 python run_backend.py
 ```
-- **Backend API:** [http://localhost:8000](http://localhost:8000)
-- **Interactive Swagger Docs (Viva Demo):** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Alternative Redoc Docs:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-### 2. Start the Frontend
-```bash
-python -m http.server 8080
-```
-- **Web App:** [http://localhost:8080](http://localhost:8080)
+- **Unified Web Application:** [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs (Viva Demo):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Redoc Documentation:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ---
 
